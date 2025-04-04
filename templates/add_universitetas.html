@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Naujo universiteto pridėjimas</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #3498db;
+    }
+    
+    h1 {
+      color: #2c3e50;
+      font-size: 1.8rem;
+    }
+    
+    .btn-back {
+      background-color: #3498db;
+      color: white;
+      text-decoration: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .btn-back:hover {
+      background-color: #2980b9;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+    
+    input:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+    }
+    
+    input[type="date"] {
+      padding: 9px 10px;
+    }
+    
+    .format-hint {
+      display: block;
+      margin-top: 5px;
+      font-size: 0.8rem;
+      color: #7f8c8d;
+    }
+    
+    .btn-submit {
+      background-color: #2ecc71;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 10px;
+      width: 100%;
+    }
+    
+    .btn-submit:hover {
+      background-color: #27ae60;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .footer {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    
+    .note {
+      background-color: #f8f9fa;
+      border-left: 4px solid #3498db;
+      padding: 12px;
+      margin-bottom: 20px;
+      color: #666;
+      font-size: 0.9rem;
+      border-radius: 0 4px 4px 0;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+      
+      header {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      header a {
+        margin-top: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Pridėti naują universitetą</h1>
+      <a href="/universitetai" class="btn-back">← Grįžti į universitetų sąrašą</a>
+    </header>
+    
+    <div class="note">
+      <strong>Pastaba:</strong> Universiteto ID bus sugeneruotas automatiškai.
+    </div>
+    
+    <form id="uniForm">
+      <div class="form-group">
+        <label for="pavadinimas">Pavadinimas</label>
+        <input name="pavadinimas" id="pavadinimas" placeholder="Įveskite universiteto pavadinimą" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="salis">Šalis</label>
+        <input name="salis" id="salis" placeholder="Įveskite šalį" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="miestas">Miestas</label>
+        <input name="miestas" id="miestas" placeholder="Įveskite miestą" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="ikurimo_data">Įkūrimo data</label>
+        <input type="date" name="ikurimo_data" id="ikurimo_data" required>
+        <span class="format-hint">Data bus išsaugota formatu YYYY/MM/DD</span>
+      </div>
+      
+      <div class="form-group">
+        <label for="studentu_skaicius">Studentų skaičius</label>
+        <input name="studentu_skaicius" id="studentu_skaicius" type="number" placeholder="Įveskite studentų skaičių" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="darbuotoju_skaicius">Darbuotojų skaičius</label>
+        <input name="darbuotoju_skaicius" id="darbuotoju_skaicius" type="number" placeholder="Įveskite darbuotojų skaičių" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="fakultetu_skaicius">Fakultetų skaičius</label>
+        <input name="fakultetu_skaicius" id="fakultetu_skaicius" type="number" placeholder="Įveskite fakultetų skaičių" required>
+      </div>
+      
+      <button type="submit" class="btn-submit">Pridėti universitetą</button>
+    </form>
+    
+    <div class="footer">
+      &copy; 2024 KTU duomenų bazių laboratorinis darbas
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='add_universitetas.js') }}"></script>
+</body>
+</html>

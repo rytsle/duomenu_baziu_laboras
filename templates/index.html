@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Universiteto DB sistema</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      margin: 20px;
+      width: 100%;
+    }
+    
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 30px;
+      font-size: 2.2rem;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 15px;
+    }
+    
+    .btn {
+      display: inline-block;
+      background-color: #3498db;
+      color: white;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: 600;
+      margin-top: 20px;
+      transition: all 0.3s ease;
+    }
+    
+    .btn:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .description {
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+    
+    .footer {
+      margin-top: 50px;
+      color: #7f8c8d;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Universitetų duomenų bazės valdymo sistema</h1>
+    
+    <p class="description">
+      Sveiki atvykę į universitetų duomenų bazės valdymo sistemą. 
+      Čia galite peržiūrėti, kurti, redaguoti ir trinti įrašus apie universitetus.
+    </p>
+    
+    <a href="/universitetai" class="btn">Peržiūrėti universitetų duomenis</a>
+    
+    <div class="footer">
+      &copy; 2024 KTU duomenų bazių laboratorinis darbas
+    </div>
+  </div>
+</body>
+</html>
