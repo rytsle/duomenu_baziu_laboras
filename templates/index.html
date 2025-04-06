@@ -50,7 +50,7 @@
       text-decoration: none;
       border-radius: 5px;
       font-weight: 600;
-      margin-top: 20px;
+      margin: 10px;
       transition: all 0.3s ease;
     }
     
@@ -58,6 +58,14 @@
       background-color: #2980b9;
       transform: translateY(-2px);
       box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-secondary {
+      background-color: #2ecc71;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #27ae60;
     }
     
     .description {
@@ -71,18 +79,27 @@
       color: #7f8c8d;
       font-size: 0.9rem;
     }
+    
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Universitetų duomenų bazės valdymo sistema</h1>
+    <h1>Universiteto DB sistema</h1>
     
     <p class="description">
-      Sveiki atvykę į universitetų duomenų bazės valdymo sistemą. 
-      Čia galite peržiūrėti, kurti, redaguoti ir trinti įrašus apie universitetus.
+      Lentelių peržiūra ir pildymas
     </p>
     
-    <a href="/universitetai" class="btn">Peržiūrėti universitetų duomenis</a>
+    <div class="button-container">
+      <a href="/universitetai" class="btn">Peržiūrėti universitetų duomenis</a>
+      <a href="/forma-f2" class="btn btn-secondary">Forma F2</a>
+    </div>
     
     <div class="footer">
       &copy; 2024 KTU duomenų bazių laboratorinis darbas
