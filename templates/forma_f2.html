@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <title>Studijų moduliai</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 30px;
+      font-size: 2.2rem;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 15px;
+      text-align: center;
+    }
+    
+    .btn {
+      display: inline-block;
+      background-color: #3498db;
+      color: white;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: 600;
+      margin: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-add {
+      background-color: #2ecc71;
+    }
+    
+    .btn-add:hover {
+      background-color: #27ae60;
+    }
+    
+    .btn-edit {
+      background-color: #f39c12;
+    }
+    
+    .btn-edit:hover {
+      background-color: #d35400;
+    }
+    
+    .btn-delete {
+      background-color: #e74c3c;
+    }
+    
+    .btn-delete:hover {
+      background-color: #c0392b;
+    }
+    
+    .btn-cancel {
+      background-color: #95a5a6;
+    }
+    
+    .btn-cancel:hover {
+      background-color: #7f8c8d;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    th {
+      background-color: #3498db;
+      color: white;
+      font-weight: 600;
+    }
+    
+    tr:hover {
+      background-color: #f5f5f5;
+    }
+    
+    tr.editing {
+      background-color: #f8f9fa;
+      box-shadow: 0 0 10px rgba(52, 152, 219, 0.3);
+    }
+    
+    input[type="text"],
+    input[type="number"],
+    input[type="date"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    
+    .format-hint {
+      font-size: 0.8em;
+      color: #7f8c8d;
+      margin-top: 5px;
+      display: block;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .footer {
+      margin-top: 50px;
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    
+    #loading-message {
+      color: #3498db;
+      margin: 20px 0;
+      text-align: center;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Studijų moduliai</h1>
+    
+    <div class="action-buttons">
+      <button class="btn btn-add" onclick="window.location.href='/forma-f2/add'">Pridėti naują modulį</button>
+      <button class="btn" onclick="window.location.href='/'">Grįžti į pagrindinį</button>
+    </div>
+    
+    <table id="table">
+      <thead>
+        <tr>
+          <th>Pavadinimas</th>
+          <th>Kreditų skaičius</th>
+          <th>Modulio kodas</th>
+          <th>Padalinys</th>
+          <th>Dėstytojai</th>
+          <th>Veiksmai</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Table content will be loaded dynamically -->
+      </tbody>
+    </table>
+    
+    <div class="footer">
+      &copy; 2024 KTU duomenų bazių laboratorinis darbas
+    </div>
+  </div>
+  
+  <script src="{{ url_for('static', filename='forma_f2.js') }}"></script>
+</body>
+</html> 

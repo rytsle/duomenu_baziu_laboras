@@ -1,10 +1,17 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from db_config import get_connection
 from flask_cors import CORS
+import mysql.connector
+from mysql.connector import Error
+import logging
 
 app = Flask(__name__)
 # Configure CORS to allow all methods and headers
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Handle preflight requests for all routes
 @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
@@ -21,150 +28,418 @@ def universitetai():
     return render_template('universitetai.html')
 
 @app.route('/universitetai/data')
-def get_universitetai():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM universitetai")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(rows)
-
-@app.route('/universitetai/add')
-def add_universitetas_form():
-    return render_template('add_universitetas.html')
-
-@app.route('/universitetai/insert', methods=['POST'])
-def insert_universitetas():
+def get_universitetai_data():
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'message': 'No JSON data received'}), 400
-            
-        conn = get_connection()
-        cursor = conn.cursor()
+        connection = get_connection()
+        cursor = connection.cursor()
         
-        # The database will auto-increment the ID
-        cursor.execute("""
-            INSERT INTO universitetai (
-                pavadinimas, salis, miestas,
-                ikurimo_data, studentu_skaicius, darbuotoju_skaicius, fakultetu_skaicius
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            data['pavadinimas'], data['salis'], data['miestas'],
-            data['ikurimo_data'], data['studentu_skaicius'], data['darbuotoju_skaicius'], data['fakultetu_skaicius']
-        ))
+        # Get column names
+        cursor.execute("SHOW COLUMNS FROM universitetai")
+        columns = [column[0] for column in cursor.fetchall()]
         
-        conn.commit()
-        
-        # Get the last inserted ID for the message
-        last_id = cursor.lastrowid
+        # Get data
+        cursor.execute("SELECT * FROM universitetai")
+        data = cursor.fetchall()
         
         cursor.close()
-        conn.close()
-        return jsonify({'message': f'Universitetas sėkmingai pridėtas! (ID: {last_id})'})
+        connection.close()
         
-    except Exception as e:
-        print(f"Error in insert: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
+        return jsonify(data)
+    except Error as e:
+        logger.error(f"Error fetching universitetai data: {e}")
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/universitetai/delete/<id>', methods=['DELETE'])
-def delete_universitetas(id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM universitetai WHERE id_universitetas = %s", (id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return jsonify({'message': 'Deleted successfully'})
-
-@app.route('/universitetai/update/<id>', methods=['PUT', 'OPTIONS'])
-def update_universitetas(id):
-    # Handle OPTIONS request for CORS preflight
-    if request.method == 'OPTIONS':
-        return '', 204
-        
-    try:
-        print(f"Update request received for ID: {id}")
-        print(f"Request data: {request.data}")
-        print(f"Request content type: {request.content_type}")
-        
-        # Get the JSON data
-        data = request.get_json()
-        print(f"Parsed JSON data: {data}")
-        
-        if not data:
-            print("No data received")
-            return jsonify({'message': 'No JSON data received'}), 400
-        
-        # Connect to database
-        conn = None
-        cursor = None
+@app.route('/universitetai/add', methods=['GET', 'POST'])
+def add_universitetas():
+    if request.method == 'GET':
+        return render_template('add_universitetas.html')
+    else:
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "No data provided"}), 400
             
-            # Get current data
-            cursor.execute("SELECT * FROM universitetai WHERE id_universitetas = %s", (id,))
-            current_data = cursor.fetchone()
+            connection = get_connection()
+            cursor = connection.cursor()
             
-            if not current_data:
-                print(f"University with ID {id} not found")
-                return jsonify({'message': 'University not found'}), 404
+            # Insert new record
+            cursor.execute("""
+                INSERT INTO universitetai (pavadinimas, salis, miestas, ikurimo_data, 
+                studentu_skaicius, darbuotoju_skaicius, fakultetu_skaicius)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                data['pavadinimas'],
+                data['salis'],
+                data['miestas'],
+                data['ikurimo_data'],
+                data['studentu_skaicius'],
+                data['darbuotoju_skaicius'],
+                data['fakultetu_skaicius']
+            ))
+            
+            connection.commit()
+            last_id = cursor.lastrowid
+            
+            cursor.close()
+            connection.close()
+            
+            return jsonify({
+                "message": f"Universitetas pridėtas sėkmingai su ID: {last_id}",
+                "id": last_id
+            })
+        except Error as e:
+            logger.error(f"Error adding universitetas: {e}")
+            return jsonify({"error": str(e)}), 500
+
+@app.route('/universitetai/delete/<int:id>', methods=['DELETE'])
+def delete_universitetas(id):
+    try:
+        connection = get_connection()
+        cursor = connection.cursor()
+        
+        cursor.execute("DELETE FROM universitetai WHERE id = %s", (id,))
+        connection.commit()
+        
+        affected_rows = cursor.rowcount
+        
+        cursor.close()
+        connection.close()
+        
+        if affected_rows == 0:
+            return jsonify({"error": "Įrašas nerastas"}), 404
+        
+        return jsonify({"message": "Ištrinta sėkmingai"})
+    except Error as e:
+        logger.error(f"Error deleting universitetas: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/universitetai/update/<int:id>', methods=['PUT'])
+def update_universitetas(id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        # Validate field names
+        valid_fields = {
+            'pavadinimas', 'salis', 'miestas', 'ikurimo_data',
+            'studentu_skaicius', 'darbuotoju_skaicius', 'fakultetu_skaicius'
+        }
+        
+        invalid_fields = set(data.keys()) - valid_fields
+        if invalid_fields:
+            return jsonify({"error": f"Invalid fields: {', '.join(invalid_fields)}"}), 400
+        
+        connection = get_connection()
+        cursor = connection.cursor()
+        
+        # Build update query dynamically
+        update_fields = []
+        values = []
+        for field, value in data.items():
+            update_fields.append(f"{field} = %s")
+            values.append(value)
+        
+        values.append(id)  # Add id for WHERE clause
+        
+        query = f"""
+            UPDATE universitetai 
+            SET {', '.join(update_fields)}
+            WHERE id = %s
+        """
+        
+        cursor.execute(query, values)
+        connection.commit()
+        
+        affected_rows = cursor.rowcount
+        
+        cursor.close()
+        connection.close()
+        
+        if affected_rows == 0:
+            return jsonify({"error": "Įrašas nerastas"}), 404
+        
+        return jsonify({"message": "Atnaujinta sėkmingai"})
+    except Error as e:
+        logger.error(f"Error updating universitetas: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Forma F2 routes
+@app.route('/forma-f2')
+def forma_f2():
+    return render_template('forma_f2.html')
+
+@app.route('/forma-f2/padaliniai')
+def get_padaliniai():
+    try:
+        connection = get_connection()
+        cursor = connection.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT 
+                id_padalinys,
+                pavadinimas
+            FROM padaliniai
+            ORDER BY pavadinimas
+        """)
+        
+        data = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        
+        return jsonify(data)
+    except Error as e:
+        logger.error(f"Error fetching padaliniai: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/forma-f2/destytojai')
+def get_destytojai():
+    try:
+        connection = get_connection()
+        cursor = connection.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT 
+                id_darbuotojas,
+                vardas,
+                pavarde,
+                pareigos
+            FROM darbuotojai
+            ORDER BY vardas, pavarde
+        """)
+        
+        data = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        
+        return jsonify(data)
+    except Error as e:
+        logger.error(f"Error fetching destytojai: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/forma-f2/add', methods=['GET', 'POST'])
+def add_modulis():
+    if request.method == 'GET':
+        return render_template('add_modulis.html')
+    else:
+        try:
+            data = request.get_json()
+            
+            # Validate required fields
+            required_fields = ['pavadinimas', 'kreditu_skaicius', 'modulio_kodas', 'fk_modulio_padalinys']
+            for field in required_fields:
+                if not data.get(field):
+                    return jsonify({"error": f"Privalomas laukas: {field}"}), 400
+            
+            connection = get_connection()
+            cursor = connection.cursor()
+            
+            # Start transaction
+            cursor.execute("START TRANSACTION")
+            
+            try:
+                # Insert into studiju_moduliai
+                cursor.execute("""
+                    INSERT INTO studiju_moduliai (
+                        pavadinimas, kreditu_skaicius, modulio_kodas, fk_modulio_padalinys
+                    ) VALUES (%s, %s, %s, %s)
+                """, (
+                    data['pavadinimas'],
+                    data['kreditu_skaicius'],
+                    data['modulio_kodas'],
+                    data['fk_modulio_padalinys']
+                ))
                 
-            # Make sure we only accept valid field names
-            valid_fields = [
-                'pavadinimas', 'salis', 'miestas', 'ikurimo_data', 
-                'studentu_skaicius', 'darbuotoju_skaicius', 'fakultetu_skaicius'
-            ]
-            
-            # Prepare update statement
-            update_fields = []
-            update_values = []
-            
-            # Process each field in the request
-            for field, value in data.items():
-                if field in valid_fields and value and value.strip():
-                    # Use backticks to properly escape field names
-                    update_fields.append(f"`{field}` = %s")
-                    update_values.append(value)
-            
-            if not update_fields:
-                print("No fields to update")
-                return jsonify({'message': 'No fields to update'}), 400
+                # Get the auto-generated ID
+                modulio_id = cursor.lastrowid
                 
-            # Add ID for the WHERE clause
-            update_values.append(id)
-            
-            # Execute the update
-            query = f"UPDATE universitetai SET {', '.join(update_fields)} WHERE id_universitetas = %s"
-            print(f"Executing query: {query}")
-            print(f"With values: {update_values}")
-            
-            cursor.execute(query, update_values)
-            affected_rows = cursor.rowcount
-            print(f"Affected rows: {affected_rows}")
-            
-            conn.commit()
-            
-            if affected_rows > 0:
-                return jsonify({'message': 'Updated successfully'}), 200
-            else:
-                return jsonify({'message': 'No changes made'}), 200
-        finally:
-            # Always close cursor and connection
-            if cursor:
+                # If teachers were selected, insert into destytojai_moduliai
+                if data.get('destytojai') and len(data['destytojai']) > 0:
+                    for destytojas_id in data['destytojai']:
+                        cursor.execute("""
+                            INSERT INTO destytojai_moduliai (
+                                fk_destytojo_studiju_modulis, fk_modulio_destytojas
+                            ) VALUES (%s, %s)
+                        """, (modulio_id, destytojas_id))
+                
+                # Commit transaction
+                connection.commit()
                 cursor.close()
-            if conn:
-                conn.close()
+                connection.close()
                 
-    except Exception as e:
-        print(f"Error in update: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
+                return jsonify({"message": "Modulis sėkmingai pridėtas"})
+                
+            except Error as e:
+                # Rollback transaction on error
+                connection.rollback()
+                cursor.close()
+                connection.close()
+                raise e
+                
+        except Error as e:
+            logger.error(f"Error adding modulis: {e}")
+            return jsonify({"error": str(e)}), 500
+
+@app.route('/forma-f2/delete/<int:id>', methods=['DELETE'])
+def delete_modulis(id):
+    try:
+        connection = get_connection()
+        cursor = connection.cursor()
+        
+        # Start transaction
+        cursor.execute("START TRANSACTION")
+        
+        try:
+            # First delete from destytojai_moduliai
+            cursor.execute("""
+                DELETE FROM destytojai_moduliai 
+                WHERE fk_destytojo_studiju_modulis = %s
+            """, (id,))
+            
+            # Then delete from studiju_moduliai
+            cursor.execute("""
+                DELETE FROM studiju_moduliai 
+                WHERE id_studiju_modulis = %s
+            """, (id,))
+            
+            # Commit transaction
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            return jsonify({"message": "Modulis sėkmingai ištrintas"})
+            
+        except Error as e:
+            # Rollback transaction on error
+            connection.rollback()
+            cursor.close()
+            connection.close()
+            raise e
+            
+    except Error as e:
+        logger.error(f"Error deleting modulis: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/forma-f2/update/<int:id>', methods=['PUT'])
+def update_modulis(id):
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['pavadinimas', 'kreditu_skaicius', 'modulio_kodas', 'fk_modulio_padalinys']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({"error": f"Privalomas laukas: {field}"}), 400
+        
+        connection = get_connection()
+        cursor = connection.cursor()
+        
+        # Start transaction
+        cursor.execute("START TRANSACTION")
+        
+        try:
+            # Update studiju_moduliai
+            cursor.execute("""
+                UPDATE studiju_moduliai 
+                SET pavadinimas = %s,
+                    kreditu_skaicius = %s,
+                    modulio_kodas = %s,
+                    fk_modulio_padalinys = %s
+                WHERE id_studiju_modulis = %s
+            """, (
+                data['pavadinimas'],
+                data['kreditu_skaicius'],
+                data['modulio_kodas'],
+                data['fk_modulio_padalinys'],
+                id
+            ))
+            
+            # Update destytojai_moduliai
+            if 'destytojai' in data:
+                # First, delete existing relationships
+                cursor.execute("""
+                    DELETE FROM destytojai_moduliai 
+                    WHERE fk_destytojo_studiju_modulis = %s
+                """, (id,))
+                
+                # Then insert new relationships if any
+                if data['destytojai'] and len(data['destytojai']) > 0:
+                    for destytojas_id in data['destytojai']:
+                        cursor.execute("""
+                            INSERT INTO destytojai_moduliai (
+                                fk_destytojo_studiju_modulis, fk_modulio_destytojas
+                            ) VALUES (%s, %s)
+                        """, (id, destytojas_id))
+            
+            # Commit transaction
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            return jsonify({"message": "Modulis sėkmingai atnaujintas"})
+            
+        except Error as e:
+            # Rollback transaction on error
+            connection.rollback()
+            cursor.close()
+            connection.close()
+            raise e
+            
+    except Error as e:
+        logger.error(f"Error updating modulis: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/forma-f2/data')
+def get_moduliai_data():
+    try:
+        connection = get_connection()
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get all modules with their departments and teachers
+        cursor.execute("""
+            SELECT 
+                sm.id_studiju_modulis,
+                sm.pavadinimas,
+                sm.kreditu_skaicius,
+                sm.modulio_kodas,
+                sm.fk_modulio_padalinys,
+                p.id_padalinys,
+                p.pavadinimas as padalinys,
+                GROUP_CONCAT(
+                    CONCAT(d.id_darbuotojas, ':', d.vardas, ' ', d.pavarde)
+                    SEPARATOR ';'
+                ) as destytojai
+            FROM studiju_moduliai sm
+            LEFT JOIN padaliniai p ON sm.fk_modulio_padalinys = p.id_padalinys
+            LEFT JOIN destytojai_moduliai dm ON sm.id_studiju_modulis = dm.fk_destytojo_studiju_modulis
+            LEFT JOIN darbuotojai d ON dm.fk_modulio_destytojas = d.id_darbuotojas
+            GROUP BY sm.id_studiju_modulis
+            ORDER BY sm.id_studiju_modulis
+        """)
+        
+        data = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        
+        # Process the data to include teacher IDs
+        for row in data:
+            if row['destytojai']:
+                teachers = []
+                for teacher in row['destytojai'].split(';'):
+                    if teacher:
+                        teacher_id, teacher_name = teacher.split(':', 1)
+                        teachers.append({
+                            'id': teacher_id,
+                            'name': teacher_name
+                        })
+                row['destytojai'] = teachers
+            else:
+                row['destytojai'] = []
+        
+        return jsonify(data)
+    except Error as e:
+        logger.error(f"Error fetching moduliai data: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

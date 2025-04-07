@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <title>Naujo modulio pridėjimas</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 30px;
+      font-size: 2.2rem;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 15px;
+      text-align: center;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    
+    select[multiple] {
+      height: 150px;
+    }
+    
+    .required::after {
+      content: " *";
+      color: red;
+    }
+    
+    .btn {
+      display: inline-block;
+      background-color: #3498db;
+      color: white;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 20px;
+    }
+    
+    .btn:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-back {
+      display: inline-block;
+      background-color: #95a5a6;
+      color: white;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: 600;
+      margin-top: 20px;
+      text-align: center;
+      width: 100%;
+    }
+    
+    .btn-back:hover {
+      background-color: #7f8c8d;
+    }
+    
+    .footer {
+      margin-top: 50px;
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    
+    .note {
+      font-size: 0.9em;
+      color: #7f8c8d;
+      margin-top: 5px;
+    }
+    
+    .checkbox-group {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 5px;
+    }
+    
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .checkbox-item:last-child {
+      border-bottom: none;
+    }
+    
+    .checkbox-item input[type="checkbox"] {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Naujo modulio pridėjimas</h1>
+    
+    <form id="addModulisForm">
+      <div class="form-group">
+        <label for="pavadinimas" class="required">Pavadinimas</label>
+        <input type="text" id="pavadinimas" name="pavadinimas" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="kreditu_skaicius" class="required">Kreditų skaičius</label>
+        <input type="number" id="kreditu_skaicius" name="kreditu_skaicius" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="modulio_kodas" class="required">Modulio kodas</label>
+        <input type="text" id="modulio_kodas" name="modulio_kodas" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="fk_modulio_padalinys" class="required">Padalinys</label>
+        <select id="fk_modulio_padalinys" name="fk_modulio_padalinys" required>
+          <option value="">Pasirinkite padalinį</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Dėstytojai</label>
+        <div id="destytojai" class="checkbox-group">
+          <!-- Checkboxes will be added here by JavaScript -->
+        </div>
+      </div>
+      
+      <div class="button-group">
+        <button type="submit" class="btn">Pridėti modulį</button>
+        <button type="button" class="btn-back" onclick="window.location.href='/forma-f2'">Grįžti atgal</button>
+      </div>
+    </form>
+    
+    <div class="footer">
+      &copy; 2024 KTU duomenų bazių laboratorinis darbas
+    </div>
+  </div>
+  
+  <script src="{{ url_for('static', filename='add_modulis.js') }}"></script>
+</body>
+</html> 
