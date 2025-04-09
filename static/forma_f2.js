@@ -4,6 +4,7 @@ const baseUrl = window.location.origin;
 // Prevent multiple simultaneous operations
 let isSubmitting = false;
 let isEditing = false;
+let isLoading = false;
 
 // Load table data
 async function loadTable() {
@@ -239,33 +240,56 @@ async function editRow(button) {
     }
 }
 
+// Cancel edit
+function cancelEdit() {
+    isEditing = false;
+    isLoading = false;
+    loadTable();
+}
+
 // Save row
 async function saveRow(button) {
+    if (isLoading) {
+        alert('Prašome palaukti, kol baigsis dabartinė operacija.');
+        return;
+    }
+    
+    isLoading = true;
+    console.log(`Saving module with ID: ${button.closest('tr').dataset.id}`);
+    
     try {
-        const row = button.closest('tr');
-        const id = row.dataset.id;
-        
-        // Collect teacher data with hours
-        const destytojai = [];
-        const checkboxes = document.querySelectorAll('#edit_destytojai input[type="checkbox"]:checked');
-        checkboxes.forEach(checkbox => {
-            const teacherId = checkbox.value;
-            const hoursInput = document.getElementById(`valandos_${teacherId}`);
-            destytojai.push({
-                id: teacherId,
-                valandu_kiekis: hoursInput ? hoursInput.value : null
-            });
-        });
-        
+        const tr = button.closest('tr');
         const formData = {
             pavadinimas: document.getElementById('edit_pavadinimas').value,
             kreditu_skaicius: document.getElementById('edit_kreditu_skaicius').value,
             modulio_kodas: document.getElementById('edit_modulio_kodas').value,
             fk_modulio_padalinys: document.getElementById('edit_padalinys').value,
-            destytojai: destytojai
+            destytojai: []
         };
+
+        // Get the selected teachers and their hours
+        const checkboxes = document.querySelectorAll('#edit_destytojai input[type="checkbox"]:checked');
+        checkboxes.forEach(checkbox => {
+            const teacherId = checkbox.value;
+            const hoursInput = document.getElementById(`valandos_${teacherId}`);
+            formData.destytojai.push({
+                id: teacherId,
+                valandu_kiekis: hoursInput ? hoursInput.value : null
+            });
+        });
+
+        // Check if at least one teacher is assigned
+        if (formData.destytojai.length === 0) {
+            alert('Turi būti priskirtas bent vienas dėstytojas');
+            isLoading = false;
+            return;
+        }
+
+        // Send update request
+        const updateUrl = `${baseUrl}/forma-f2/update/${tr.dataset.id}`;
+        console.log('Update URL:', updateUrl);
         
-        const response = await fetch(`${baseUrl}/forma-f2/update/${id}`, {
+        const response = await fetch(updateUrl, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -274,22 +298,30 @@ async function saveRow(button) {
             body: JSON.stringify(formData)
         });
         
-        if (!response.ok) {
-            throw new Error('Klaida išsaugant duomenis');
+        console.log('Response status:', response.status);
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server neįformino atsakymo JSON formatu');
         }
         
+        const result = await response.json();
+        console.log('Server response:', result);
+        
+        if (!response.ok) {
+            throw new Error(result.message || `Klaida: ${response.status}`);
+        }
+        
+        alert(result.message || 'Atnaujinta sėkmingai');
         isEditing = false;
+        isLoading = false;
         await loadTable();
     } catch (error) {
         console.error('Error saving row:', error);
-        alert(error.message);
+        alert(`Klaida atnaujinant įrašą: ${error.message}`);
+        isLoading = false;
+        isEditing = false;
     }
-}
-
-// Cancel edit
-function cancelEdit() {
-    isEditing = false;
-    loadTable();
 }
 
 // Delete row
