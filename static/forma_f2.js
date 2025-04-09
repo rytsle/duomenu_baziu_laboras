@@ -94,7 +94,7 @@ async function fetchDestytojai(containerId, selectedTeachers = []) {
     try {
         const response = await fetch(`${baseUrl}/forma-f2/destytojai`);
         if (!response.ok) {
-            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            throw new Error('Klaida įkeliant dėstytojus');
         }
         const data = await response.json();
         
@@ -104,10 +104,10 @@ async function fetchDestytojai(containerId, selectedTeachers = []) {
             return;
         }
         
-        container.innerHTML = ''; // Clear any existing content
+        container.innerHTML = '';
         
         if (!data || data.length === 0) {
-            container.innerHTML = '<div class="no-teachers">Nėra dėstytojų</div>';
+            container.innerHTML = '<div>Nėra dėstytojų</div>';
             return;
         }
         
@@ -121,7 +121,9 @@ async function fetchDestytojai(containerId, selectedTeachers = []) {
             checkbox.value = destytojas.id_darbuotojas;
             checkbox.name = 'destytojai[]';
             
-            if (selectedTeachers && selectedTeachers.includes(destytojas.id_darbuotojas)) {
+            // Check if this teacher is selected
+            const isSelected = selectedTeachers.some(t => t.id === destytojas.id_darbuotojas);
+            if (isSelected) {
                 checkbox.checked = true;
             }
             
@@ -129,8 +131,44 @@ async function fetchDestytojai(containerId, selectedTeachers = []) {
             label.htmlFor = `destytojas_${destytojas.id_darbuotojas}`;
             label.textContent = `${destytojas.vardas} ${destytojas.pavarde} (${destytojas.pareigos})`;
             
+            // Create hours input (initially hidden)
+            const hoursDiv = document.createElement('div');
+            hoursDiv.className = 'hours-input';
+            hoursDiv.style.display = isSelected ? 'block' : 'none';
+            
+            const hoursLabel = document.createElement('label');
+            hoursLabel.htmlFor = `valandos_${destytojas.id_darbuotojas}`;
+            hoursLabel.textContent = 'Valandų skaičius:';
+            
+            const hoursInput = document.createElement('input');
+            hoursInput.type = 'number';
+            hoursInput.id = `valandos_${destytojas.id_darbuotojas}`;
+            hoursInput.name = `valandos[${destytojas.id_darbuotojas}]`;
+            hoursInput.min = '0';
+            hoursInput.step = '0.5';
+            
+            // Set hours value if editing
+            if (isSelected) {
+                const teacherData = selectedTeachers.find(t => t.id === destytojas.id_darbuotojas);
+                if (teacherData && teacherData.valandu_kiekis) {
+                    hoursInput.value = teacherData.valandu_kiekis;
+                }
+            }
+            
+            hoursDiv.appendChild(hoursLabel);
+            hoursDiv.appendChild(hoursInput);
+            
+            // Add event listener to show/hide hours input
+            checkbox.addEventListener('change', function() {
+                hoursDiv.style.display = this.checked ? 'block' : 'none';
+                if (!this.checked) {
+                    hoursInput.value = '';
+                }
+            });
+            
             div.appendChild(checkbox);
             div.appendChild(label);
+            div.appendChild(hoursDiv);
             container.appendChild(div);
         });
     } catch (error) {
@@ -207,13 +245,24 @@ async function saveRow(button) {
         const row = button.closest('tr');
         const id = row.dataset.id;
         
+        // Collect teacher data with hours
+        const destytojai = [];
+        const checkboxes = document.querySelectorAll('#edit_destytojai input[type="checkbox"]:checked');
+        checkboxes.forEach(checkbox => {
+            const teacherId = checkbox.value;
+            const hoursInput = document.getElementById(`valandos_${teacherId}`);
+            destytojai.push({
+                id: teacherId,
+                valandu_kiekis: hoursInput ? hoursInput.value : null
+            });
+        });
+        
         const formData = {
             pavadinimas: document.getElementById('edit_pavadinimas').value,
             kreditu_skaicius: document.getElementById('edit_kreditu_skaicius').value,
             modulio_kodas: document.getElementById('edit_modulio_kodas').value,
             fk_modulio_padalinys: document.getElementById('edit_padalinys').value,
-            destytojai: Array.from(document.querySelectorAll('#edit_destytojai input[type="checkbox"]:checked'))
-                .map(checkbox => checkbox.value)
+            destytojai: destytojai
         };
         
         const response = await fetch(`${baseUrl}/forma-f2/update/${id}`, {

@@ -328,17 +328,17 @@ def update_modulis(id):
         # Validate required fields
         required_fields = ['pavadinimas', 'kreditu_skaicius', 'modulio_kodas', 'fk_modulio_padalinys']
         for field in required_fields:
-            if not data.get(field):
+            if field not in data or not data[field]:
                 return jsonify({"error": f"Privalomas laukas: {field}"}), 400
         
         connection = get_connection()
         cursor = connection.cursor()
         
-        # Start transaction
-        cursor.execute("START TRANSACTION")
-        
         try:
-            # Update studiju_moduliai
+            # Start transaction
+            connection.start_transaction()
+            
+            # Update module
             cursor.execute("""
                 UPDATE studiju_moduliai 
                 SET pavadinimas = %s,
@@ -354,40 +354,44 @@ def update_modulis(id):
                 id
             ))
             
-            # Update destytojai_moduliai
-            if 'destytojai' in data:
-                # First, delete existing relationships
-                cursor.execute("""
-                    DELETE FROM destytojai_moduliai 
-                    WHERE fk_destytojo_studiju_modulis = %s
-                """, (id,))
-                
-                # Then insert new relationships if any
-                if data['destytojai'] and len(data['destytojai']) > 0:
-                    for destytojas_id in data['destytojai']:
-                        cursor.execute("""
-                            INSERT INTO destytojai_moduliai (
-                                fk_destytojo_studiju_modulis, fk_modulio_destytojas
-                            ) VALUES (%s, %s)
-                        """, (id, destytojas_id))
+            # Delete old teacher relationships
+            cursor.execute("""
+                DELETE FROM destytojai_moduliai 
+                WHERE fk_destytojo_studiju_modulis = %s
+            """, (id,))
+            
+            # Insert new teacher relationships with hours
+            if 'destytojai' in data and data['destytojai']:
+                for destytojas in data['destytojai']:
+                    cursor.execute("""
+                        INSERT INTO destytojai_moduliai 
+                        (fk_destytojo_studiju_modulis, fk_modulio_destytojas, valandu_kiekis)
+                        VALUES (%s, %s, %s)
+                    """, (
+                        id,
+                        destytojas['id'],
+                        destytojas.get('valandu_kiekis')
+                    ))
             
             # Commit transaction
             connection.commit()
-            cursor.close()
-            connection.close()
-            
             return jsonify({"message": "Modulis sėkmingai atnaujintas"})
             
         except Error as e:
             # Rollback transaction on error
             connection.rollback()
+            raise e
+            
+        finally:
             cursor.close()
             connection.close()
-            raise e
             
     except Error as e:
         logger.error(f"Error updating modulis: {e}")
         return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error updating modulis: {e}")
+        return jsonify({"error": "Vidinė serverio klaida"}), 500
 
 @app.route('/forma-f2/data')
 def get_moduliai_data():
@@ -406,7 +410,13 @@ def get_moduliai_data():
                 p.id_padalinys,
                 p.pavadinimas as padalinys,
                 GROUP_CONCAT(
-                    CONCAT(d.id_darbuotojas, ':', d.vardas, ' ', d.pavarde)
+                    CONCAT(
+                        d.id_darbuotojas, 
+                        ':', 
+                        d.vardas, ' ', d.pavarde,
+                        ':', 
+                        COALESCE(dm.valandu_kiekis, '')
+                    )
                     SEPARATOR ';'
                 ) as destytojai
             FROM studiju_moduliai sm
@@ -421,17 +431,27 @@ def get_moduliai_data():
         cursor.close()
         connection.close()
         
-        # Process the data to include teacher IDs
+        # Process the data to include teacher IDs and hours
         for row in data:
             if row['destytojai']:
                 teachers = []
                 for teacher in row['destytojai'].split(';'):
                     if teacher:
-                        teacher_id, teacher_name = teacher.split(':', 1)
-                        teachers.append({
-                            'id': teacher_id,
-                            'name': teacher_name
-                        })
+                        try:
+                            teacher_id, teacher_name, hours = teacher.split(':', 2)
+                            teachers.append({
+                                'id': int(teacher_id),
+                                'name': teacher_name,
+                                'valandu_kiekis': hours if hours else None
+                            })
+                        except ValueError:
+                            # Handle case where hours might be missing
+                            teacher_id, teacher_name = teacher.split(':', 1)
+                            teachers.append({
+                                'id': int(teacher_id),
+                                'name': teacher_name,
+                                'valandu_kiekis': None
+                            })
                 row['destytojai'] = teachers
             else:
                 row['destytojai'] = []
