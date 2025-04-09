@@ -4,6 +4,7 @@
   <title>Naujo modulio pridėjimas</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
     * {
       margin: 0;
@@ -141,6 +142,30 @@
     .checkbox-item input[type="checkbox"] {
       margin-right: 10px;
     }
+    
+    .teacher-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .teacher-row select {
+      flex: 1;
+    }
+    .teacher-row input[type="number"] {
+      width: 100px;
+    }
+    .remove-teacher {
+      background-color: #ff4444;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .remove-teacher:hover {
+      background-color: #cc0000;
+    }
   </style>
 </head>
 <body>
@@ -172,9 +197,16 @@
       
       <div class="form-group">
         <label>Dėstytojai</label>
-        <div id="destytojai" class="checkbox-group">
-          <!-- Checkboxes will be added here by JavaScript -->
+        <div id="destytojaiContainer">
+          <div class="teacher-row">
+            <select name="destytojai[]" required>
+              <option value="">Pasirinkite dėstytoją</option>
+            </select>
+            <input type="number" name="valandu_kiekis[]" placeholder="Valandų kiekis" min="0">
+            <button type="button" class="remove-teacher" onclick="removeTeacher(this)">-</button>
+          </div>
         </div>
+        <button type="button" onclick="addTeacher()">+ Pridėti dėstytoją</button>
       </div>
       
       <div class="button-group">
@@ -188,6 +220,125 @@
     </div>
   </div>
   
-  <script src="{{ url_for('static', filename='add_modulis.js') }}"></script>
+  <script>
+    // Load departments and teachers when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      loadPadaliniai();
+      loadDestytojai();
+    });
+
+    function loadPadaliniai() {
+      fetch('/forma-f2/padaliniai')
+        .then(response => response.json())
+        .then(data => {
+          const select = document.getElementById('fk_modulio_padalinys');
+          data.forEach(padalinys => {
+            const option = document.createElement('option');
+            option.value = padalinys.id_padalinys;
+            option.textContent = padalinys.pavadinimas;
+            select.appendChild(option);
+          });
+        })
+        .catch(error => {
+          console.error('Error loading padaliniai:', error);
+          alert('Klaida įkeliant padalinius');
+        });
+    }
+
+    function loadDestytojai() {
+      fetch('/forma-f2/destytojai')
+        .then(response => response.json())
+        .then(data => {
+          const selects = document.querySelectorAll('select[name="destytojai[]"]');
+          selects.forEach(select => {
+            // Clear existing options except the first one
+            while (select.options.length > 1) {
+              select.remove(1);
+            }
+            
+            data.forEach(destytojas => {
+              const option = document.createElement('option');
+              option.value = destytojas.id_darbuotojas;
+              option.textContent = `${destytojas.vardas} ${destytojas.pavarde}`;
+              select.appendChild(option);
+            });
+          });
+        })
+        .catch(error => {
+          console.error('Error loading destytojai:', error);
+          alert('Klaida įkeliant dėstytojus');
+        });
+    }
+
+    function addTeacher() {
+      const container = document.getElementById('destytojaiContainer');
+      const newRow = document.createElement('div');
+      newRow.className = 'teacher-row';
+      newRow.innerHTML = `
+        <select name="destytojai[]" required>
+          <option value="">Pasirinkite dėstytoją</option>
+        </select>
+        <input type="number" name="valandu_kiekis[]" placeholder="Valandų kiekis" min="0">
+        <button type="button" class="remove-teacher" onclick="removeTeacher(this)">-</button>
+      `;
+      container.appendChild(newRow);
+      loadDestytojai(); // Reload teachers for the new select
+    }
+
+    function removeTeacher(button) {
+      const row = button.parentElement;
+      if (document.querySelectorAll('.teacher-row').length > 1) {
+        row.remove();
+      } else {
+        alert('Turi būti bent vienas dėstytojas');
+      }
+    }
+
+    document.getElementById('addModulisForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = {
+        pavadinimas: document.getElementById('pavadinimas').value,
+        kreditu_skaicius: document.getElementById('kreditu_skaicius').value,
+        modulio_kodas: document.getElementById('modulio_kodas').value,
+        fk_modulio_padalinys: document.getElementById('fk_modulio_padalinys').value,
+        destytojai: []
+      };
+
+      // Collect teacher data
+      const teacherSelects = document.querySelectorAll('select[name="destytojai[]"]');
+      const hourInputs = document.querySelectorAll('input[name="valandu_kiekis[]"]');
+      
+      teacherSelects.forEach((select, index) => {
+        if (select.value) {
+          formData.destytojai.push({
+            id: select.value,
+            valandu_kiekis: hourInputs[index].value || null
+          });
+        }
+      });
+
+      fetch('/forma-f2/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          alert('Modulis sėkmingai pridėtas');
+          window.location.href = '/forma-f2';
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Klaida pridedant modulį');
+      });
+    });
+  </script>
 </body>
 </html> 

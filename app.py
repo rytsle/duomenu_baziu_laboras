@@ -234,10 +234,10 @@ def add_modulis():
             connection = get_connection()
             cursor = connection.cursor()
             
-            # Start transaction
-            cursor.execute("START TRANSACTION")
-            
             try:
+                # Start transaction
+                connection.start_transaction()
+                
                 # Insert into studiju_moduliai
                 cursor.execute("""
                     INSERT INTO studiju_moduliai (
@@ -253,32 +253,38 @@ def add_modulis():
                 # Get the auto-generated ID
                 modulio_id = cursor.lastrowid
                 
-                # If teachers were selected, insert into destytojai_moduliai
-                if data.get('destytojai') and len(data['destytojai']) > 0:
-                    for destytojas_id in data['destytojai']:
+                # If teachers were selected, insert into destytojai_moduliai with hours
+                if 'destytojai' in data and data['destytojai']:
+                    for destytojas in data['destytojai']:
                         cursor.execute("""
-                            INSERT INTO destytojai_moduliai (
-                                fk_destytojo_studiju_modulis, fk_modulio_destytojas
-                            ) VALUES (%s, %s)
-                        """, (modulio_id, destytojas_id))
+                            INSERT INTO destytojai_moduliai 
+                            (fk_destytojo_studiju_modulis, fk_modulio_destytojas, valandu_kiekis)
+                            VALUES (%s, %s, %s)
+                        """, (
+                            modulio_id,
+                            destytojas['id'],
+                            destytojas.get('valandu_kiekis')
+                        ))
                 
                 # Commit transaction
                 connection.commit()
-                cursor.close()
-                connection.close()
-                
                 return jsonify({"message": "Modulis sėkmingai pridėtas"})
                 
             except Error as e:
                 # Rollback transaction on error
                 connection.rollback()
+                raise e
+                
+            finally:
                 cursor.close()
                 connection.close()
-                raise e
                 
         except Error as e:
             logger.error(f"Error adding modulis: {e}")
             return jsonify({"error": str(e)}), 500
+        except Exception as e:
+            logger.error(f"Unexpected error adding modulis: {e}")
+            return jsonify({"error": "Vidinė serverio klaida"}), 500
 
 @app.route('/forma-f2/delete/<int:id>', methods=['DELETE'])
 def delete_modulis(id):
