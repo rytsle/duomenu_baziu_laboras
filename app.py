@@ -27,6 +27,63 @@ def index():
 def universitetai():
     return render_template('universitetai.html')
 
+@app.route('/ataskaita')
+def ataskaita():
+    try:
+        # Get date filter parameters from request
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
+        
+
+        connection = get_connection()
+        cursor = connection.cursor(dictionary=True)
+        
+        # Base query
+        query = """
+            SELECT 
+                darbuotojai.vardas, 
+                darbuotojai.pavarde, 
+                padaliniai.pavadinimas, 
+                atlyginimai.bruto_valandinis_atlyginimas, 
+                atlyginimai.ismokejimo_data, 
+                atlyginimai.priedai, 
+                atlyginimai.darbo_valandos 
+            FROM darbuotojai 
+            LEFT JOIN darbuotojai_padaliniai 
+                ON darbuotojai.id_darbuotojas = darbuotojai_padaliniai.fk_padalinio_darbuotojas 
+            LEFT JOIN padaliniai 
+                ON padaliniai.id_padalinys = darbuotojai_padaliniai.fk_darbuotojo_padalinys 
+            LEFT JOIN atlyginimai 
+                ON atlyginimai.fk_atlyginimo_darbuotojas = darbuotojai.id_darbuotojas
+        """
+        
+        # Add date filters if provided
+        conditions = []
+        params = []
+        
+        if date_from:
+            conditions.append("atlyginimai.ismokejimo_data >= %s")
+            params.append(date_from)
+        
+        if date_to:
+            conditions.append("atlyginimai.ismokejimo_data <= %s")
+            params.append(date_to)
+        
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        
+        # Execute the query with parameters
+        cursor.execute(query, params)
+        
+        data = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        
+        return render_template('ataskaita.html', data=data, date_from=date_from, date_to=date_to)
+    except Error as e:
+        logger.error(f"Error fetching ataskaita data: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/universitetai/data')
 def get_universitetai_data():
     try:
@@ -337,6 +394,9 @@ def update_modulis(id):
             if field not in data or not data[field]:
                 return jsonify({"error": f"Privalomas laukas: {field}"}), 400
         
+        for datapoint in data:
+            if datapoint['kreditu_skaicius'] < 0 or datapoint['kreditu_skaicius'] > 25:
+                return jsonify({"error": "Kreditu skaicius turi buti tarp 0 ir 25"}), 400
         connection = get_connection()
         cursor = connection.cursor()
         

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ataskaita</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      margin: 20px auto;
+    }
+    
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 30px;
+      font-size: 2.2rem;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 15px;
+      text-align: center;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    th {
+      background-color: #3498db;
+      color: white;
+      position: sticky;
+      top: 0;
+    }
+    
+    tr:hover {
+      background-color: #f5f5f5;
+    }
+    
+    .back-btn {
+      display: inline-block;
+      background-color: #3498db;
+      color: white;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: 600;
+      margin-top: 20px;
+    }
+    
+    .back-btn:hover {
+      background-color: #2980b9;
+    }
+
+    .filter-container {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .date-input {
+      padding: 10px 15px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      font-size: 16px;
+    }
+    
+    .filter-btn {
+      background-color: #e74c3c;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s ease;
+    }
+    
+    .filter-btn:hover {
+      background-color: #c0392b;
+    }
+    
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .input-label {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #34495e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Darbuotojų atlyginimų ataskaita</h1>
+    
+    <form class="filter-container" method="GET" action="/ataskaita">
+      <div class="input-group">
+        <span class="input-label">Data Nuo:</span>
+        <input 
+          type="date" 
+          name="date_from" 
+          class="date-input" 
+          value="{{ date_from if date_from else '' }}"
+        >
+      </div>
+      <div class="input-group">
+        <span class="input-label">Data Iki:</span>
+        <input 
+          type="date" 
+          name="date_to" 
+          class="date-input" 
+          value="{{ date_to if date_to else '' }}"
+        >
+      </div>
+      <button type="submit" class="filter-btn">Filtruoti</button>
+    </form>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Vardas</th>
+          <th>Pavardė</th>
+          <th>Padalinys</th>
+          <th>Bruto valandinis atlyginimas</th>
+          <th>Išmokėjimo data</th>
+          <th>Priedai</th>
+          <th>Darbo valandos</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data %}
+        <tr>
+          <td>{{ row.vardas }}</td>
+          <td>{{ row.pavarde }}</td>
+          <td>{{ row.pavadinimas }}</td>
+          <td>{{ row.bruto_valandinis_atlyginimas }}</td>
+          <td>{{ row.ismokejimo_data }}</td>
+          <td>{{ row.priedai }}</td>
+          <td>{{ row.darbo_valandos }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    
+    <a href="/" class="back-btn">Grįžti į pagrindinį puslapį</a>
+  </div>
+</body>
+</html>
