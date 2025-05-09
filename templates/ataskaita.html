@@ -118,13 +118,51 @@
       margin-bottom: 5px;
       color: #34495e;
     }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+      background-color: white;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 80%;
+      max-width: 500px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+
+    .close-modal {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    .close-modal:hover {
+      background-color: #2980b9;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Darbuotojų atlyginimų ataskaita</h1>
     
-    <form class="filter-container" method="GET" action="/ataskaita">
+    <form class="filter-container" method="GET" action="/ataskaita" id="filterForm">
       <div class="input-group">
         <span class="input-label">Data Nuo:</span>
         <input 
@@ -141,6 +179,55 @@
           name="date_to" 
           class="date-input" 
           value="{{ date_to if date_to else '' }}"
+        >
+      </div>
+      <div class="input-group">
+        <span class="input-label">Darbo valandos nuo:</span>
+        <input 
+          type="number" 
+          name="hours_from" 
+          class="date-input" 
+          min="0"
+          value="{{ hours_from if hours_from else '' }}"
+        >
+      </div>
+      <div class="input-group">
+        <span class="input-label">Darbo valandos iki:</span>
+        <input 
+          type="number" 
+          name="hours_to" 
+          class="date-input" 
+          min="0"
+          value="{{ hours_to if hours_to else '' }}"
+        >
+      </div>
+      <div class="input-group">
+        <span class="input-label">Padalinio paieška:</span>
+        <input 
+          type="text" 
+          name="search_text" 
+          class="date-input" 
+          placeholder="Ieškoti..."
+          value="{{ search_text if search_text else '' }}"
+        >
+      </div>
+      <div class="input-group">
+        <span class="input-label">Rikiavimas pagal bruto atlyginimą:</span>
+        <select name="sort_order" class="date-input">
+          <option value="" {% if not sort_order %}selected{% endif %}>Pasirinkite</option>
+          <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Didėjančiai</option>
+          <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Mažėjančiai</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <span class="input-label">Eilučių kiekis:</span>
+        <input 
+          type="number" 
+          name="row_limit" 
+          class="date-input" 
+          min="0"
+          placeholder="Visi"
+          value="{{ row_limit if row_limit else '' }}"
         >
       </div>
       <button type="submit" class="filter-btn">Filtruoti</button>
@@ -175,5 +262,53 @@
     
     <a href="/" class="back-btn">Grįžti į pagrindinį puslapį</a>
   </div>
+
+  <!-- Modal for error messages -->
+  <div id="errorModal" class="modal">
+    <div class="modal-content">
+      <p id="modalMessage"></p>
+      <button class="close-modal" onclick="closeModal()">Uždaryti</button>
+    </div>
+  </div>
+
+  <script>
+    function validateForm(event) {
+      const hoursFromInput = document.querySelector('input[name="hours_from"]');
+      const hoursToInput = document.querySelector('input[name="hours_to"]');
+      
+      // Check hours_from
+      if (hoursFromInput.value && parseFloat(hoursFromInput.value) < 0) {
+        event.preventDefault();
+        showErrorModal("Darbo valandos negali būti neigiamos!");
+        return false;
+      }
+      
+      // Check hours_to
+      if (hoursToInput.value && parseFloat(hoursToInput.value) < 0) {
+        event.preventDefault();
+        showErrorModal("Darbo valandos negali būti neigiamos!");
+        return false;
+      }
+      
+      return true;
+    }
+    
+    function showErrorModal(message) {
+      const modal = document.getElementById('errorModal');
+      const modalMessage = document.getElementById('modalMessage');
+      modalMessage.textContent = message;
+      modal.style.display = 'block';
+    }
+    
+    function closeModal() {
+      const modal = document.getElementById('errorModal');
+      modal.style.display = 'none';
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      const filterForm = document.getElementById('filterForm');
+      filterForm.addEventListener('submit', validateForm);
+    });
+  </script>
 </body>
 </html>

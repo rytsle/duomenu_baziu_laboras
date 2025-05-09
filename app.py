@@ -30,34 +30,19 @@ def universitetai():
 @app.route('/ataskaita')
 def ataskaita():
     try:
-        # Get date filter parameters from request
+        # Get filter parameters from request
         date_from = request.args.get('date_from')
         date_to = request.args.get('date_to')
-        
+        hours_from = request.args.get('hours_from')
+        hours_to = request.args.get('hours_to')
+        search_text = request.args.get('search_text')
+        sort_order = request.args.get('sort_order')
+        row_limit = request.args.get('row_limit')
 
         connection = get_connection()
         cursor = connection.cursor(dictionary=True)
         
-        # Base query
-        query = """
-            SELECT 
-                darbuotojai.vardas, 
-                darbuotojai.pavarde, 
-                padaliniai.pavadinimas, 
-                atlyginimai.bruto_valandinis_atlyginimas, 
-                atlyginimai.ismokejimo_data, 
-                atlyginimai.priedai, 
-                atlyginimai.darbo_valandos 
-            FROM darbuotojai 
-            LEFT JOIN darbuotojai_padaliniai 
-                ON darbuotojai.id_darbuotojas = darbuotojai_padaliniai.fk_padalinio_darbuotojas 
-            LEFT JOIN padaliniai 
-                ON padaliniai.id_padalinys = darbuotojai_padaliniai.fk_darbuotojo_padalinys 
-            LEFT JOIN atlyginimai 
-                ON atlyginimai.fk_atlyginimo_darbuotojas = darbuotojai.id_darbuotojas
-        """
-        
-        # Add date filters if provided
+        # Build filter conditions
         conditions = []
         params = []
         
@@ -69,17 +54,148 @@ def ataskaita():
             conditions.append("atlyginimai.ismokejimo_data <= %s")
             params.append(date_to)
         
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
+        if hours_from:
+            conditions.append("atlyginimai.darbo_valandos >= %s")
+            params.append(hours_from)
+            
+        if hours_to:
+            conditions.append("atlyginimai.darbo_valandos <= %s")
+            params.append(hours_to)
+            
+        if search_text:
+            conditions.append("padaliniai.pavadinimas LIKE %s")
+            params.append('%' + search_text + '%')
+
+        # Construct the WHERE clause
+        where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
         
-        # Execute the query with parameters
+        # Construct the ORDER BY clause if sorting is requested
+        order_clause = ""
+        if sort_order:
+            order_direction = "ASC" if sort_order == 'asc' else "DESC"
+            order_clause = f" ORDER BY bruto_valandinis_atlyginimas {order_direction}"
+        
+        # Construct the LIMIT clause if row limiting is requested
+        limit_clause = ""
+        if row_limit and row_limit.isdigit() and int(row_limit) > 0:
+            limit_clause = f" LIMIT {int(row_limit)}"
+        
+        # Build the final combined query using UNION ALL
+        # First part: actual data rows with appropriate filters, sorting, and limiting
+        # Second part: aggregated statistics with same filters but no sorting or limiting
+        query = f"""
+            WITH filtered_data AS (
+                SELECT 
+                    darbuotojai.vardas, 
+                    darbuotojai.pavarde, 
+                    padaliniai.pavadinimas, 
+                    atlyginimai.bruto_valandinis_atlyginimas, 
+                    atlyginimai.ismokejimo_data, 
+                    atlyginimai.priedai, 
+                    atlyginimai.darbo_valandos,
+                    0 as row_type
+                FROM darbuotojai 
+                LEFT JOIN darbuotojai_padaliniai 
+                    ON darbuotojai.id_darbuotojas = darbuotojai_padaliniai.fk_padalinio_darbuotojas 
+                LEFT JOIN padaliniai 
+                    ON padaliniai.id_padalinys = darbuotojai_padaliniai.fk_darbuotojo_padalinys 
+                LEFT JOIN atlyginimai 
+                    ON atlyginimai.fk_atlyginimo_darbuotojas = darbuotojai.id_darbuotojas
+                {where_clause}
+                {order_clause}
+                {limit_clause}
+            )
+            
+            SELECT * FROM (
+                SELECT 
+                    vardas, 
+                    pavarde, 
+                    pavadinimas, 
+                    bruto_valandinis_atlyginimas, 
+                    ismokejimo_data, 
+                    priedai, 
+                    darbo_valandos,
+                    row_type
+                FROM filtered_data
+                
+                
+                UNION ALL
+                
+                SELECT 
+                    '' as vardas,
+                    '' as pavarde,
+                    '' as pavadinimas,
+                    '' as bruto_valandinis_atlyginimas,
+                    '' as ismokejimo_data,
+                    '' as priedai,
+                    '' as darbo_valandos,
+                    1 as row_type
+                
+                UNION ALL
+                
+                SELECT 
+                    'Iš viso' as vardas,
+                    '' as pavarde,
+                    '' as pavadinimas,
+                    CAST(SUM(bruto_valandinis_atlyginimas) AS CHAR) as bruto_valandinis_atlyginimas,
+                    '' as ismokejimo_data,
+                    CAST(SUM(priedai) AS CHAR) as priedai,
+                    CAST(SUM(darbo_valandos) AS CHAR) as darbo_valandos,
+                    2 as row_type
+                FROM filtered_data
+                
+                UNION ALL
+                
+                SELECT 
+                    'Vidurkiai' as vardas,
+                    '' as pavarde,
+                    '' as pavadinimas,
+                    CAST(AVG(bruto_valandinis_atlyginimas) AS CHAR) as bruto_valandinis_atlyginimas,
+                    '' as ismokejimo_data,
+                    CAST(AVG(priedai) AS CHAR) as priedai,
+                    CAST(AVG(darbo_valandos) AS CHAR) as darbo_valandos,
+                    3 as row_type
+                FROM filtered_data
+                
+                UNION ALL
+                
+                -- Maximum row
+                SELECT 
+                    'Maksimalus' as vardas,
+                    '' as pavarde,
+                    '' as pavadinimas,
+                    CAST(MAX(bruto_valandinis_atlyginimas) AS CHAR) as bruto_valandinis_atlyginimas,
+                    '' as ismokejimo_data,
+                    CAST(MAX(priedai) AS CHAR) as priedai,
+                    CAST(MAX(darbo_valandos) AS CHAR) as darbo_valandos,
+                    4 as row_type
+                FROM filtered_data
+                
+                UNION ALL
+                
+                -- Minimum row
+                SELECT 
+                    'Minimalus' as vardas,
+                    '' as pavarde,
+                    '' as pavadinimas,
+                    CAST(MIN(bruto_valandinis_atlyginimas) AS CHAR) as bruto_valandinis_atlyginimas,
+                    '' as ismokejimo_data,
+                    CAST(MIN(priedai) AS CHAR) as priedai,
+                    CAST(MIN(darbo_valandos) AS CHAR) as darbo_valandos,
+                    5 as row_type
+                FROM filtered_data
+            ) AS result_set
+            ORDER BY row_type
+        """        # Execute the combined query
         cursor.execute(query, params)
-        
         data = cursor.fetchall()
+        
         cursor.close()
         connection.close()
         
-        return render_template('ataskaita.html', data=data, date_from=date_from, date_to=date_to)
+        return render_template('ataskaita.html', data=data, date_from=date_from, date_to=date_to, 
+                              hours_from=hours_from, hours_to=hours_to, search_text=search_text,
+                              sort_order=sort_order, row_limit=row_limit)
     except Error as e:
         logger.error(f"Error fetching ataskaita data: {e}")
         return jsonify({"error": str(e)}), 500
