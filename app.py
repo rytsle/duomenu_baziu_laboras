@@ -145,7 +145,7 @@ def ataskaita():
                 FROM filtered_data
                 
                 UNION ALL
-                
+
                 SELECT 
                     'Vidurkiai' as vardas,
                     '' as pavarde,
@@ -159,7 +159,6 @@ def ataskaita():
                 
                 UNION ALL
                 
-                -- Maximum row
                 SELECT 
                     'Maksimalus' as vardas,
                     '' as pavarde,
@@ -173,7 +172,6 @@ def ataskaita():
                 
                 UNION ALL
                 
-                -- Minimum row
                 SELECT 
                     'Minimalus' as vardas,
                     '' as pavarde,
