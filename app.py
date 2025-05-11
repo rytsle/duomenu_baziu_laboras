@@ -73,8 +73,9 @@ def ataskaita():
         order_clause = ""
         if sort_order:
             order_direction = "ASC" if sort_order == 'asc' else "DESC"
-            order_clause = f" ORDER BY bruto_valandinis_atlyginimas {order_direction}"
-        
+            order_clause = f" ORDER BY row_type ASC, CAST(bruto_valandinis_atlyginimas AS DECIMAL) {order_direction}"
+        else:
+            order_clause = " ORDER BY row_type ASC"
         # Construct the LIMIT clause if row limiting is requested
         limit_clause = ""
         if row_limit and row_limit.isdigit() and int(row_limit) > 0:
@@ -150,10 +151,10 @@ def ataskaita():
                     'Vidurkiai' as vardas,
                     '' as pavarde,
                     '' as pavadinimas,
-                    CAST(AVG(bruto_valandinis_atlyginimas) AS CHAR) as bruto_valandinis_atlyginimas,
+                    CAST(FORMAT(AVG(bruto_valandinis_atlyginimas),2) AS CHAR) as bruto_valandinis_atlyginimas,
                     '' as ismokejimo_data,
-                    CAST(AVG(priedai) AS CHAR) as priedai,
-                    CAST(AVG(darbo_valandos) AS CHAR) as darbo_valandos,
+                    CAST(FORMAT(AVG(priedai),2) AS CHAR) as priedai,
+                    CAST(FORMAT(AVG(darbo_valandos),2) AS CHAR) as darbo_valandos,
                     3 as row_type
                 FROM filtered_data
                 
@@ -183,7 +184,7 @@ def ataskaita():
                     5 as row_type
                 FROM filtered_data
             ) AS result_set
-            ORDER BY row_type
+            {order_clause}
         """        # Execute the combined query
         cursor.execute(query, params)
         data = cursor.fetchall()
